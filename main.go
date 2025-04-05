@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"sync"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -17,6 +18,7 @@ const (
 func main() {
 	app := fiber.New()
 
+	//  TODO Добавить логирование
 	log.Println("init fiber app")
 	start(app)
 }
@@ -33,7 +35,7 @@ func start(app *fiber.App) {
 
 // entity
 
-// Можно еще сделать DTO для создания юзера
+// Можно еще сделать DTO для создания юзера(даже нужно)
 type User struct {
 	Id     uint64 `json:"id"`
 	Name   string `json:"name"`
@@ -49,10 +51,10 @@ type Handlers interface {
 }
 
 type handler struct {
-	repositoryUser *RepositotyUser
+	repositoryUser *RepositoryUser
 }
 
-func NewHandler(repositoryUser *RepositotyUser) Handlers {
+func NewHandler(repositoryUser *RepositoryUser) Handlers {
 	return &handler{
 		repositoryUser: repositoryUser,
 	}
@@ -66,42 +68,21 @@ func (h *handler) Register(app *fiber.App) {
 }
 
 func (h *handler) CreateUser(c fiber.Ctx) error {
-
-	// Возможно вынести валидацию в отдельную функцию
 	name := c.Params("name")
-	if name == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing name",
-		})
-	}
-
 	ageStr := c.Params("age")
-	age, err := strconv.ParseInt(ageStr, 10, 8)
-	if age > 200 || age <= 0 || err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid age",
-		})
-	}
-
 	gender := c.Params("gender")
-	//  Можно вынести отдельно
-	validGenders := map[string]bool{"male": true, "female": true}
-	if !validGenders[gender] {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid gender",
-		})
-	}
 	//  Не буду делать валидацию email:)
 	email := c.Params("email")
-	if email == "" {
+
+	age, err := validateUser(name, ageStr, gender, email)
+	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing email",
+			"error": err.Error(),
 		})
 	}
 
 	// Желательно использовать отдельное DTO, но я не уверен в гошке делается это или нет
-	idUser, err := (*h.repositoryUser).Create(User{
-		Id:     0,
+	idUser, err := (*h.repositoryUser).Create(&User{
 		Name:   name,
 		Age:    uint8(age),
 		Gender: gender,
@@ -109,8 +90,10 @@ func (h *handler) CreateUser(c fiber.Ctx) error {
 	})
 
 	if err != nil {
-		// Я пока не знаю что отправить
-		c.SendStatus(500)
+		// Я пока не знаю что отправить, пусть будет на будущее)
+		c.Status(500).JSON(fiber.Map{
+			"error": fmt.Sprintf("server error: %v", err),
+		})
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -120,16 +103,10 @@ func (h *handler) CreateUser(c fiber.Ctx) error {
 
 func (h *handler) GetUser(c fiber.Ctx) error {
 	idUserStr := c.Params("id")
-	if idUserStr == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing id",
-		})
-	}
-
-	idUser, err := strconv.ParseUint(idUserStr, 10, 64)
+	idUser, err := validateIdUser(idUserStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid id",
+			"error": err.Error(),
 		})
 	}
 
@@ -149,61 +126,34 @@ func (h *handler) GetUser(c fiber.Ctx) error {
 
 func (h *handler) UpdateUser(c fiber.Ctx) error {
 	idUserStr := c.Params("id")
-	if idUserStr == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing id",
-		})
-	}
-
-	idUser, err := strconv.ParseUint(idUserStr, 10, 64)
-	if err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid id",
-		})
-	}
-
 	name := c.Params("name")
-	if name == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing name",
-		})
-	}
-
 	ageStr := c.Params("age")
-	age, err := strconv.ParseInt(ageStr, 10, 8)
-	if age > 200 || age <= 0 || err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid age",
-		})
-	}
-
 	gender := c.Params("gender")
-	//  Можно вынести отдельно
-	validGenders := map[string]bool{"male": true, "female": true}
-	if !validGenders[gender] {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid gender",
-		})
-	}
 	//  Не буду делать валидацию email:)
 	email := c.Params("email")
-	if email == "" {
+
+	idUser, err := validateIdUser(idUserStr)
+	age, err1 := validateUser(name, ageStr, gender, email)
+	// Нормально ли так делать?
+	if err != nil || err1 != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing email",
+			"error": err.Error(),
 		})
 	}
 
-	err = (*h.repositoryUser).Update(User{
+	err = (*h.repositoryUser).Update(&User{
 		Id:     idUser,
 		Name:   name,
-		Age:    uint8(age),
+		Age:    age,
 		Gender: gender,
 		Email:  email,
 	})
 
 	if err != nil {
 		// TODO Расписать более подробно
-		return c.SendStatus(500)
+		return c.Status(500).JSON(fiber.Map{
+			"server error": err.Error(),
+		})
 	}
 
 	return c.SendStatus(200)
@@ -211,58 +161,127 @@ func (h *handler) UpdateUser(c fiber.Ctx) error {
 
 func (h *handler) DeleteUser(c fiber.Ctx) error {
 	idUserStr := c.Params("id")
-	if idUserStr == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "Missing id",
-		})
-	}
-
-	idUser, err := strconv.ParseUint(idUserStr, 10, 64)
+	idUser, err := validateIdUser(idUserStr)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
-			"error": "Invalid id",
+			"error": err.Error(),
 		})
 	}
 
 	err = (*h.repositoryUser).Delete(idUser)
 	if err != nil {
 		// TODO Расписать более подробно
-		return c.SendStatus(500)
+		return c.Status(500).JSON(fiber.Map{
+			"server error": err.Error(),
+		})
 	}
 
 	return c.SendStatus(200)
 }
 
+func validateIdUser(idUserStr string) (uint64, error) {
+	if idUserStr == "" {
+		return 0, fmt.Errorf("missing id")
+	}
+
+	idUser, err := strconv.ParseUint(idUserStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid id")
+	}
+
+	return idUser, nil
+}
+
+func validateUser(name string, ageStr string, gender string, email string) (uint8, error) {
+	if name == "" {
+		return 0, fmt.Errorf("missing name")
+	}
+
+	age, err := strconv.ParseUint(ageStr, 10, 8)
+	if err != nil || age > 200 || age <= 0 {
+		return 0, fmt.Errorf("invalid age")
+	}
+
+	validGenders := map[string]bool{"male": true, "female": true}
+	if !validGenders[gender] {
+		return 0, fmt.Errorf("invalid gender")
+	}
+
+	if email == "" {
+		return 0, fmt.Errorf("missing email")
+	}
+
+	return uint8(age), nil
+}
+
 // repo
 
-// Нужно ли передавать в репозитрий указатель на юзера или передавать копию
-type RepositotyUser interface {
-	Create(user User) (uint64, error)
+// Нужно ли передавать в репозитрий указатель на юзера или передавать копию?
+type RepositoryUser interface {
+	Create(user *User) (uint64, error)
 	GetByID(id uint64) (*User, error)
-	Update(user User) error
+	Update(user *User) error
 	Delete(id uint64) error
 }
 
-type repositotyUserLocal struct {
-	//users map[int64]User
+type repositoryUserLocal struct {
+	users  map[uint64]User
+	nextID uint64
+	mu     sync.Mutex
 }
 
-func NewRepositotyUserLocal() RepositotyUser {
-	return &repositotyUserLocal{}
+func NewRepositotyUserLocal() RepositoryUser {
+	return &repositoryUserLocal{
+		users:  make(map[uint64]User),
+		nextID: 0,
+	}
 }
 
-func (r *repositotyUserLocal) Create(user User) (uint64, error) {
-	panic("unimplemented")
+func (r *repositoryUserLocal) Create(user *User) (uint64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	idUser := r.nextID
+	r.users[idUser] = *user
+	r.nextID++
+
+	return idUser, nil
 }
 
-func (r *repositotyUserLocal) Delete(id uint64) error {
-	panic("unimplemented")
+func (r *repositoryUserLocal) GetByID(id uint64) (*User, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	user, exists := r.users[id]
+	if !exists {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return &user, nil
 }
 
-func (r *repositotyUserLocal) GetByID(id uint64) (*User, error) {
-	panic("unimplemented")
+func (r *repositoryUserLocal) Update(user *User) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, exists := r.users[user.Id]
+	if !exists {
+		return fmt.Errorf("user not found")
+	}
+
+	r.users[user.Id] = *user
+	return nil
 }
 
-func (r *repositotyUserLocal) Update(user User) error {
-	panic("unimplemented")
+func (r *repositoryUserLocal) Delete(id uint64) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	_, exists := r.users[id]
+	if !exists {
+		return fmt.Errorf("user not found")
+	}
+
+	delete(r.users, id)
+	return nil
 }
