@@ -113,13 +113,10 @@ func (h *handler) GetUser(c fiber.Ctx) error {
 
 	user, err := (*h.repositoryUser).GetByID(idUser)
 
-	if user == nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "User not found",
-		})
-	}
 	if err != nil {
-		return c.SendStatus(500)
+		return c.Status(404).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
 	return c.Status(200).JSON(user)
@@ -134,9 +131,14 @@ func (h *handler) UpdateUser(c fiber.Ctx) error {
 	email := c.Query("email")
 
 	idUser, err := validateIdUser(idUserStr)
-	age, err1 := validateUser(name, ageStr, gender, email)
-	// Нормально ли так делать?
-	if err != nil || err1 != nil {
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	age, err := validateUser(name, ageStr, gender, email)
+	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"error": err.Error(),
 		})
@@ -152,8 +154,8 @@ func (h *handler) UpdateUser(c fiber.Ctx) error {
 
 	if err != nil {
 		// TODO Расписать более подробно
-		return c.Status(500).JSON(fiber.Map{
-			"server error": err.Error(),
+		return c.Status(404).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
 
@@ -171,9 +173,8 @@ func (h *handler) DeleteUser(c fiber.Ctx) error {
 
 	err = (*h.repositoryUser).Delete(idUser)
 	if err != nil {
-		// TODO Расписать более подробно
-		return c.Status(500).JSON(fiber.Map{
-			"server error": err.Error(),
+		return c.Status(404).JSON(fiber.Map{
+			"error": err.Error(),
 		})
 	}
 
