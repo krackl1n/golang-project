@@ -68,11 +68,12 @@ func (h *handler) Register(app *fiber.App) {
 }
 
 func (h *handler) CreateUser(c fiber.Ctx) error {
-	name := c.Params("name")
-	ageStr := c.Params("age")
-	gender := c.Params("gender")
+	name := c.Query("name")
+
+	ageStr := c.Query("age")
+	gender := c.Query("gender")
 	//  Не буду делать валидацию email:)
-	email := c.Params("email")
+	email := c.Query("email")
 
 	age, err := validateUser(name, ageStr, gender, email)
 	if err != nil {
@@ -126,11 +127,11 @@ func (h *handler) GetUser(c fiber.Ctx) error {
 
 func (h *handler) UpdateUser(c fiber.Ctx) error {
 	idUserStr := c.Params("id")
-	name := c.Params("name")
-	ageStr := c.Params("age")
-	gender := c.Params("gender")
+	name := c.Query("name")
+	ageStr := c.Query("age")
+	gender := c.Query("gender")
 	//  Не буду делать валидацию email:)
-	email := c.Params("email")
+	email := c.Query("email")
 
 	idUser, err := validateIdUser(idUserStr)
 	age, err1 := validateUser(name, ageStr, gender, email)
