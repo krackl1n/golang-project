@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
@@ -22,10 +24,13 @@ func NewHandler(userUseCase *usecase.UseCase) *Handler {
 }
 
 func (h *Handler) CreateUser(c fiber.Ctx) error {
+	// TODO Логи переделать
 	createUserDTO := new(models.CreateUserDTO)
+
 	if err := c.Bind().Body(createUserDTO); err != nil {
+		slog.Warn("Invalid request body", "error", err)
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": errors.Wrap(err, "invalid request body").Error(),
+			"error": "Invalid request body",
 		})
 	}
 
@@ -36,7 +41,9 @@ func (h *Handler) CreateUser(c fiber.Ctx) error {
 		})
 	}
 
-	idUser, err := h.userUseCase.CreateUser(createUserDTO)
+	// Потом добавлю контекст
+	ctx := context.TODO()
+	idUser, err := h.userUseCase.CreateUser(ctx, createUserDTO)
 	if err != nil {
 		c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": errors.Wrap(err, "failed create user").Error(),
@@ -49,6 +56,7 @@ func (h *Handler) CreateUser(c fiber.Ctx) error {
 }
 
 func (h *Handler) GetUser(c fiber.Ctx) error {
+	// TODO Логи переделать
 	uuidUser, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
@@ -56,7 +64,9 @@ func (h *Handler) GetUser(c fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.userUseCase.GetUserById(uuidUser)
+	// Потом добавлю контекст
+	ctx := context.TODO()
+	user, err := h.userUseCase.GetUserById(ctx, uuidUser)
 	if err != nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"error": errors.Wrap(err, "user not found").Error(),
@@ -67,6 +77,7 @@ func (h *Handler) GetUser(c fiber.Ctx) error {
 }
 
 func (h *Handler) UpdateUser(c fiber.Ctx) error {
+	// TODO Логи переделать
 	user := new(models.User)
 	if err := c.Bind().Body(user); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
@@ -81,7 +92,9 @@ func (h *Handler) UpdateUser(c fiber.Ctx) error {
 		})
 	}
 
-	if err := h.userUseCase.UpdateUser(user); err != nil {
+	// Потом добавлю контекст
+	ctx := context.TODO()
+	if err := h.userUseCase.UpdateUser(ctx, user); err != nil {
 		return c.Status(404).JSON(fiber.Map{
 			"error": errors.Wrap(err, "user not found").Error(),
 		})
@@ -91,6 +104,7 @@ func (h *Handler) UpdateUser(c fiber.Ctx) error {
 }
 
 func (h *Handler) DeleteUser(c fiber.Ctx) error {
+	// TODO Логи переделать
 	uuidUser, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
@@ -98,7 +112,9 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 		})
 	}
 
-	if err = h.userUseCase.DeleteUser(uuidUser); err != nil {
+	// Потом добавлю контекст
+	ctx := context.TODO()
+	if err = h.userUseCase.DeleteUser(ctx, uuidUser); err != nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"error": errors.Wrap(err, "user not found").Error(),
 		})
