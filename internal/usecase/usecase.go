@@ -19,12 +19,11 @@ func NewUseCase(userRepository repository.UserProvider) *UseCase {
 // TODO Дописать usecase
 
 func (uc *UseCase) CreateUser(createUserDTO *models.CreateUserDTO) (uuid.UUID, error) {
-
 	uuidUser, err := uuid.NewV7()
 	if err != nil {
 		return uuidUser, err
 	}
-	// user := models.User
+
 	return uc.userRepository.Create(&models.User{
 		Id:     uuidUser,
 		Name:   createUserDTO.Name,

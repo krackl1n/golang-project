@@ -25,21 +25,21 @@ func (h *Handler) CreateUser(c fiber.Ctx) error {
 	createUserDTO := new(models.CreateUserDTO)
 	if err := c.Bind().Body(createUserDTO); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": errors.Wrap(err, "invalid request body"),
+			"error": errors.Wrap(err, "invalid request body").Error(),
 		})
 	}
 
 	validate := validator.New()
 	if err := validate.Struct(createUserDTO); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": errors.Wrap(err, "invalid request body"),
+			"error": errors.Wrap(err, "invalid request body").Error(),
 		})
 	}
 
 	idUser, err := h.userUseCase.CreateUser(createUserDTO)
 	if err != nil {
 		c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"error": errors.Wrap(err, "failed create user"),
+			"error": errors.Wrap(err, "failed create user").Error(),
 		})
 	}
 
@@ -52,14 +52,14 @@ func (h *Handler) GetUser(c fiber.Ctx) error {
 	uuidUser, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": errors.Wrap(err, "failed create user"),
+			"error": errors.Wrap(err, "failed create user").Error(),
 		})
 	}
 
 	user, err := h.userUseCase.GetUserById(uuidUser)
 	if err != nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": errors.Wrap(err, "user not found"),
+			"error": errors.Wrap(err, "user not found").Error(),
 		})
 	}
 
@@ -70,18 +70,20 @@ func (h *Handler) UpdateUser(c fiber.Ctx) error {
 	user := new(models.User)
 	if err := c.Bind().Body(user); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": errors.Wrap(err, "invalid request body"),
+			"error": errors.Wrap(err, "invalid request body").Error(),
 		})
 	}
 
 	validate := validator.New()
 	if err := validate.Struct(user); err != nil {
-		errors.Wrap(err, "invalid request body")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"error": errors.Wrap(err, "invalid request body").Error(),
+		})
 	}
 
 	if err := h.userUseCase.UpdateUser(user); err != nil {
 		return c.Status(404).JSON(fiber.Map{
-			"error": errors.Wrap(err, "User not found"),
+			"error": errors.Wrap(err, "user not found").Error(),
 		})
 	}
 
@@ -92,13 +94,13 @@ func (h *Handler) DeleteUser(c fiber.Ctx) error {
 	uuidUser, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"error": errors.Wrap(err, "failed create user"),
+			"error": errors.Wrap(err, "failed create user").Error(),
 		})
 	}
 
 	if err = h.userUseCase.DeleteUser(uuidUser); err != nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"error": errors.Wrap(err, "user not found"),
+			"error": errors.Wrap(err, "user not found").Error(),
 		})
 	}
 

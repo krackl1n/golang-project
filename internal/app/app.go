@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 
-	"github.com/krackl1n/golang-project/database"
 	"github.com/krackl1n/golang-project/internal/handler"
 	"github.com/krackl1n/golang-project/internal/repository"
 	"github.com/krackl1n/golang-project/internal/usecase"
@@ -16,10 +15,9 @@ const (
 
 func Run() error {
 	//  TODO Добавить логирование
-	err := database.Migrate(connString)
-	if err != nil {
-		return err
-	}
+	// if err := database.Migrate(connString); err != nil {
+	// 	return err
+	// }
 
 	// log.Println("init fiber app")
 
@@ -31,6 +29,6 @@ func Run() error {
 
 	// log.Println("listening port ", 8080)
 
-	app.Listen(fmt.Sprintf(":%d", 8080))
+	err := app.Listen(fmt.Sprintf(":%d", 8080))
 	return err
 }
