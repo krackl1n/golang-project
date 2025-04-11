@@ -13,9 +13,6 @@ FROM alpine:3.18 AS final
 
 RUN apk add --no-cache bash
 
-WORKDIR /root/
-
 COPY --from=builder /app/user-service .
-COPY --from=builder /app/.env .
 
 CMD ["./user-service"]

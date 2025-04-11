@@ -2,11 +2,13 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/krackl1n/golang-project/internal/apperr"
 	"github.com/krackl1n/golang-project/internal/models"
 	"github.com/pkg/errors"
 )
@@ -27,14 +29,13 @@ func (r *userRepository) Create(ctx context.Context, user *models.User) (uuid.UU
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
-	_, err := r.conn.Exec(ctx, query, user.Id.String(), user.Name, user.Age, user.Gender, user.Email)
+	_, err := r.conn.Exec(ctx, query, user.ID.String(), user.Name, user.Age, user.Gender, user.Email)
 	if err != nil {
-		slog.Error("Failed to create user", "email", user.Email, "error", err)
 		return uuid.Nil, errors.Wrap(err, "create user")
 	}
 
-	slog.Info("Created user", "id", user.Id)
-	return user.Id, nil
+	slog.Debug(fmt.Sprintf("created user: id=%s", user.ID))
+	return user.ID, nil
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
@@ -46,17 +47,15 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 
 	var user models.User
 	row := r.conn.QueryRow(ctx, query, id)
-	err := row.Scan(&user.Id, &user.Name, &user.Age, &user.Gender, &user.Email)
+	err := row.Scan(&user.ID, &user.Name, &user.Age, &user.Gender, &user.Email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			slog.Warn("User not found", "id", id)
-			return nil, errors.New("user not found")
+			return nil, apperr.ErrorNotFound
 		}
-		slog.Error("Failed to get user by ID", "id", id, "error", err)
 		return nil, errors.Wrap(err, "scan user data")
 	}
 
-	slog.Info("User received successfully", "id", id)
+	slog.Debug(fmt.Sprintf("received successfully: id=%s", id))
 	return &user, nil
 }
 
@@ -67,19 +66,16 @@ func (r *userRepository) Update(ctx context.Context, user *models.User) error {
         WHERE id = $5
     `
 
-	result, err := r.conn.Exec(ctx, query, user.Name, user.Age, user.Gender, user.Email, user.Id)
+	result, err := r.conn.Exec(ctx, query, user.Name, user.Age, user.Gender, user.Email, user.ID)
 	if err != nil {
-		slog.Error("Failed to update user", "id", user.Id, "error", err)
-		return errors.Wrap(err, "update user")
+		return errors.Wrap(err, fmt.Sprintf("update user: id=%s", user.ID))
 	}
 
-	rows := result.RowsAffected()
-	if rows == 0 {
-		slog.Warn("User not found for update", "id", user.Id)
-		return errors.New("user not found")
+	if result.RowsAffected() == 0 {
+		return apperr.ErrorNotFound
 	}
 
-	slog.Info("User updated successfully", "id", user.Id)
+	slog.Debug(fmt.Sprintf("updated successfully: id=%s", user.ID))
 	return nil
 }
 
@@ -91,16 +87,13 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 	result, err := r.conn.Exec(ctx, query, id)
 	if err != nil {
-		slog.Error("Failed to delete user", "id", id, "error", err)
-		return errors.Wrap(err, "delete user")
+		return errors.Wrap(err, fmt.Sprintf("delete user: id=%s", id))
 	}
 
-	rows := result.RowsAffected()
-	if rows == 0 {
-		slog.Warn("User not found", "id", id)
-		return errors.New("user not found")
+	if result.RowsAffected() == 0 {
+		return apperr.ErrorNotFound
 	}
 
-	slog.Info("User deleted successfully", "id", id)
+	slog.Debug(fmt.Sprintf("deleted successfully: id=%s", id))
 	return nil
 }

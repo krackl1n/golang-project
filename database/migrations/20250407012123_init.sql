@@ -1,11 +1,9 @@
 -- +goose Up
 -- +goose StatementBegin
-SELECT 'up SQL query';
-
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(50) NOT NULL,                    
-    age SMALLINT CHECK,
+    age SMALLINT,
     gender VARCHAR(10) NOT NULL,                
     email VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -17,5 +15,5 @@ CREATE INDEX idx_users_email ON users(email);
 
 -- +goose Down
 -- +goose StatementBegin
-SELECT 'down SQL query';
+DROP TABLE users;
 -- +goose StatementEnd

@@ -8,14 +8,8 @@ import (
 )
 
 func main() {
-	// Настройка логера
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(logger)
-
 	if err := app.Run(); err != nil {
-		slog.Error(err.Error())
+		slog.Error("app run", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
