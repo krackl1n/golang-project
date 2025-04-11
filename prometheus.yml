@@ -1,0 +1,9 @@
+global:
+  scrape_interval:     15s
+
+scrape_configs:
+  - job_name: 'user-service'
+    scrape_interval: 5s
+
+    static_configs:
+      - targets: ['user-service:8081']
